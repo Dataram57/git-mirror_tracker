@@ -14,7 +14,8 @@ for dir in "$baseDir"/*; do
         echo "Git repository found: $dir"
         #scope
         cd "$dir"
-        git config --local --list
+        #git config --local --list
+        git remote -v
     fi
 done
 
