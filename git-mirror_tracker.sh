@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+currentDir=$(pwd)
+
+#get base dir
+baseDir="$HOME"
+
+#list global
+git config --global --list
+
+#search
+for dir in "$baseDir"/*; do
+    if [ -d "$dir/.git" ]; then
+        echo "Git repository found: $dir"
+        #scope
+        cd "$dir"
+        git config --local --list
+    fi
+done
+
+#restore current dir
+cd "$currentDir"
