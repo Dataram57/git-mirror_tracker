@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
+currentDir=$(pwd)
+
+#================================================================
+#region Functions
+
+Exit(){
+    cd "$currentDir"
+    exit 1
+}
 
 Print(){
     echo -e "\033[0;34mgit-mirror_tracker\033[0m: $1"
 }
 
+#endregion
 
 #================================================================
-#Repository
+#region Repository
 
 #check if repo exists
 repoDir="$HOME"/.config/git-mirror_tracker/
@@ -24,37 +34,101 @@ RepoUpdate(){   #fileName #config
     echo "$2" > "$repoDir$1"
 }
 
+RepoCommit(){
+    cd "$repoDir"
+    #check changes
+    if [ -z "$(git status --porcelain)" ]; then
+        Print "Repo has no changes"
+        return
+    else
+        Print "Repo has changes"
+        git status
+    fi
+    #commit
+    commitCount="$(git rev-list --count HEAD)"
+    if [ -z $commitCount ]; then
+        commitName="First Commit"
+    else
+        commitName="Update $commitCount"
+    fi
+    Print "Commiting \"$commitName\""
+    git add *
+    git commit -m "$commitName"
+}
+
+RepoStage(){
+    cd "$repoDir"
+    git add *
+}
+
+#endregion
+
 #================================================================
-
-#current dir
-currentDir=$(pwd)
-
 #get base dir
 
-baseDir="$HOME"
-
-#list global
-#git config --global --list
-
-#search
-for dir in "$baseDir"/*; do
-    if [ -d "$dir/.git" ]; then
-        #echo "Git repository found: $dir"
-        #scope
-        cd "$dir"
-        #git config --local --list
-        RepoUpdate "${dir:${#baseDir} + 1}" "$(git config --local --list)"
-        #echo $(git remote -v)
+Update(){
+    #check baseDir
+    if [ -z "$1" ]; then
+        baseDir="$HOME"
+    else
+        baseDir="$1"
     fi
-done
 
-cd "$repoDir"
-git status
-git add *
-git status
-git restore --staged
-git status
+    #search
+    for dir in "$baseDir"/*; do
+        if [ -d "$dir/.git" ]; then
+            #echo "Git repository found: $dir"
+            #scope
+            cd "$dir"
+            #git config --local --list
+            RepoUpdate "${dir:${#baseDir} + 1}" "$(git config --local --list)"
+            #echo $(git remote -v)
+        fi
+    done
 
-#restore current dir
-cd "$currentDir"
+    #stage
+    RepoStage
+}
 
+#================================================================
+#region Commands
+
+case "$1" in
+    #------------------------------------------------------------
+    log)
+        cd "$repoDir"
+        git log
+        ;;
+    status)
+        cd "$repoDir"
+        git status
+        ;;
+    commit)
+        RepoCommit
+        ;;
+    stage)
+        Update
+        ;;
+    reset)
+        cd "$repoDir"
+        git reset --hard
+        ;;
+    #------------------------------------------------------------
+    update)
+        Update
+        RepoCommit
+        ;;
+    #------------------------------------------------------------
+    *)
+        Print "No command"
+        ;;
+esac
+
+#endregion
+
+#================================================================
+#region Exit
+
+Exit
+
+#endregion
