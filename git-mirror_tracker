@@ -1,23 +1,60 @@
 #!/usr/bin/env bash
 
+Print(){
+    echo -e "\033[0;34mgit-mirror_tracker\033[0m: $1"
+}
+
+
+#================================================================
+#Repository
+
+#check if repo exists
+repoDir="$HOME"/.config/git-mirror_tracker/
+if [ ! -d "$repoDir".git  ]; then
+    Print "Initializing git-mirror_tracker repository at $repoDir"
+    mkdir -p "$repoDir"
+    git init "$repoDir"
+fi
+
+#----------------------------------------------------------------
+#Functions
+
+RepoUpdate(){   #fileName #config
+    Print "Saving local config for $1"
+    echo "$2" > "$repoDir$1"
+}
+
+#================================================================
+
+#current dir
 currentDir=$(pwd)
 
 #get base dir
+
 baseDir="$HOME"
 
 #list global
-git config --global --list
+#git config --global --list
 
 #search
 for dir in "$baseDir"/*; do
     if [ -d "$dir/.git" ]; then
-        echo "Git repository found: $dir"
+        #echo "Git repository found: $dir"
         #scope
         cd "$dir"
         #git config --local --list
-        git remote -v
+        RepoUpdate "${dir:${#baseDir} + 1}" "$(git config --local --list)"
+        #echo $(git remote -v)
     fi
 done
 
+cd "$repoDir"
+git status
+git add *
+git status
+git restore --staged
+git status
+
 #restore current dir
 cd "$currentDir"
+
