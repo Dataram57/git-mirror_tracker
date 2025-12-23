@@ -82,28 +82,30 @@ Mark(){ #repoPath #repoName
         repoPath="$currentDir"
     fi
     repoPath="$(realpath "$repoPath")"
-    #check if repoPath is valid
+
+    #skip if repoPath is not a dir
     if [ ! -d "$repoPath" ]; then
-        PrintError "$repoPath is not a dir."
-        Exit
         return
     fi
-    #check if git exists
+    #skip if git doesn't exists
     if [ ! -d "$repoPath/.git" ]; then
-        PrintError "$repoPath has no .git repository."
-        Exit
         return
     fi
+
+    #signal
+    Print "Checking $repoPath"
 
     #get repoID
     repoId=$(git -C "$repoPath" rev-list --max-parents=0 HEAD)
     
     #correct name
     repoName="$2"
-    while [ -z "$repoName" ]
-    do
-        read -p "Name for $repoPath:" repoName
-    done
+    if [ -z "$repoName" ]; then
+        read -p "Name for $repoPath (default: $(basename "$repoPath")):" repoName
+        if [ -z "$repoName" ]; then
+            repoName=$(basename "$repoPath")
+        fi
+    fi
 
     #construct row
     row="${repoName}${separator}${repoPath}${separator}${repoId}"
@@ -114,11 +116,9 @@ Mark(){ #repoPath #repoName
         #check
         if [ "$repoName" = "$row_repoName" ]; then
             PrintError "Repository named \"$repoName\" already exists"
-            Exit
             return
         elif [ "$repoPath" = "$row_repoPath" ]; then
             PrintError "Repository named \"$row_repoName\" already tracks $repoPath"
-            Exit
             return
         fi
     done < "$repoDir/repolist"
@@ -176,7 +176,11 @@ case "$1" in
         ;;
     #------------------------------------------------------------
     mark)
-        Mark $2
+        shift
+        while [ $# -gt 0 ]; do
+            Mark "$1"
+            shift
+        done
         ;;
     demark)
 
@@ -191,7 +195,7 @@ case "$1" in
     #------------------------------------------------------------
     update)
         Update
-        RepoCommit
+        #RepoCommit
         ;;
     fetch)
         ;;
