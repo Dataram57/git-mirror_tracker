@@ -104,7 +104,8 @@ Mark(){ #repoPath
 
     #get repoID
     repoId=$(git -C "$repoPath" rev-list --max-parents=0 HEAD)
-    
+    repoId=1
+
     #signal
     Print "Checking $repoPath"
 
@@ -142,6 +143,13 @@ Mark(){ #repoPath
     #Insert new entry
     echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
     Print "Tracking \"$repoName\" at $repoPath"
+}
+
+List(){
+    while IFS= read -r line; do
+        IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
+        echo -e "\033[0;32m"$row_repoName"\033[0m - $row_repoPath"
+    done < "$repoDir/repolist"
 }
 
 # no update if the dir doesn't exist anymore
@@ -204,6 +212,7 @@ case "$1" in
 
         ;;
     list)
+        List
         ;;
     #------------------------------------------------------------
     export)
