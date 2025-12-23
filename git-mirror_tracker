@@ -71,11 +71,21 @@ RepoStage(){
 #================================================================
 #Listing Management
 
+#check if repolist file exists
+repoDir="$HOME"/.config/git-mirror_tracker/
+if [ ! -f "$repoDir"repolist ]; then
+    Print "Creating repolist file"
+    touch "$repoDir"repolist
+fi
+
+#----------------------------------------------------------------
+#Functions
+
 # repoName      #the true id
 # repoID = git rev-list --max-parents=0 HEAD
 # repoPath
 
-Mark(){ #repoPath #repoName
+Mark(){ #repoPath
     #correct argument
     repoPath="$1"
     if [ -z "$repoPath" ]; then
@@ -92,37 +102,45 @@ Mark(){ #repoPath #repoName
         return
     fi
 
-    #signal
-    Print "Checking $repoPath"
-
     #get repoID
     repoId=$(git -C "$repoPath" rev-list --max-parents=0 HEAD)
     
-    #correct name
-    repoName="$2"
-    if [ -z "$repoName" ]; then
+    #signal
+    Print "Checking $repoPath"
+
+    #check if repo with such path has already been listed
+    while IFS= read -r line; do
+        IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
+        #check
+        if [ "$repoPath" = "$row_repoPath" ]; then
+            Print "Repository named \"$row_repoName\" already tracks $repoPath"
+            return
+        fi
+    done < "$repoDir/repolist"
+
+    #insert with proper name
+    repoName=""
+    while [ -z "$repoName" ]; do
+        #get name
         read -p "Name for $repoPath (default: $(basename "$repoPath")):" repoName
         if [ -z "$repoName" ]; then
             repoName=$(basename "$repoPath")
         fi
-    fi
 
-    #construct row
-    row="${repoName}${separator}${repoPath}${separator}${repoId}"
+        #check if repo with such name has already been listed
+        while IFS= read -r line; do
+            IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
+            #check
+            if [ "$repoName" = "$row_repoName" ]; then
+                PrintError "Repository named \"$repoName\" already exists"
+                repoName=""
+                break
+            fi
+        done < "$repoDir/repolist"
+    done
 
-    #check if repo with such name and path has already been listed
-    while IFS= read -r line; do
-        IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
-        #check
-        if [ "$repoName" = "$row_repoName" ]; then
-            PrintError "Repository named \"$repoName\" already exists"
-            return
-        elif [ "$repoPath" = "$row_repoPath" ]; then
-            PrintError "Repository named \"$row_repoName\" already tracks $repoPath"
-            return
-        fi
-    done < "$repoDir/repolist"
-    echo "$row" >> "$repoDir/repolist"
+    #Insert new entry
+    echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
     Print "Tracking \"$repoName\" at $repoPath"
 }
 
