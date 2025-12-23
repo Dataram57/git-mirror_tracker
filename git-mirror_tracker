@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 currentDir=$(pwd)
-
+separator=$'\x3B'
+clear
 #================================================================
 #region Functions
 
@@ -10,7 +11,11 @@ Exit(){
 }
 
 Print(){
-    echo -e "\033[0;34mgit-mirror_tracker\033[0m: $1"
+    echo -e "\033[0;34mInfo\033[0m: $1"
+}
+
+PrintError(){
+    echo -e "\033[0;31mError\033[0m: $1"
 }
 
 #endregion
@@ -64,8 +69,64 @@ RepoStage(){
 #endregion
 
 #================================================================
-#get base dir
+#Listing Management
 
+# repoName      #the true id
+# repoID = git rev-list --max-parents=0 HEAD
+# repoPath
+
+Mark(){ #repoPath #repoName
+    #correct argument
+    repoPath="$1"
+    if [ -z "$repoPath" ]; then
+        repoPath="$currentDir"
+    fi
+    repoPath="$(realpath "$repoPath")"
+    #check if repoPath is valid
+    if [ ! -d "$repoPath" ]; then
+        PrintError "$repoPath is not a dir."
+        Exit
+        return
+    fi
+    #check if git exists
+    if [ ! -d "$repoPath/.git" ]; then
+        PrintError "$repoPath has no .git repository."
+        Exit
+        return
+    fi
+
+    #get repoID
+    repoId=$(git -C "$repoPath" rev-list --max-parents=0 HEAD)
+    
+    #correct name
+    repoName="$2"
+    while [ -z "$repoName" ]
+    do
+        read -p "Name for $repoPath:" repoName
+    done
+
+    #construct row
+    row="${repoName}${separator}${repoPath}${separator}${repoId}"
+
+    #check if repo with such name and path has already been listed
+    while IFS= read -r line; do
+        IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
+        #check
+        if [ "$repoName" = "$row_repoName" ]; then
+            PrintError "Repository named \"$repoName\" already exists"
+            Exit
+            return
+        elif [ "$repoPath" = "$row_repoPath" ]; then
+            PrintError "Repository named \"$row_repoName\" already tracks $repoPath"
+            Exit
+            return
+        fi
+    done < "$repoDir/repolist"
+    echo "$row" >> "$repoDir/repolist"
+    Print "Tracking \"$repoName\" at $repoPath"
+}
+
+# no update if the dir doesn't exist anymore
 Update(){
     #check baseDir
     if [ -z "$1" ]; then
@@ -114,9 +175,25 @@ case "$1" in
         git reset --hard
         ;;
     #------------------------------------------------------------
+    mark)
+        Mark $2
+        ;;
+    demark)
+
+        ;;
+    list)
+        ;;
+    #------------------------------------------------------------
+    export)
+        ;;
+    import)
+        ;;
+    #------------------------------------------------------------
     update)
         Update
         RepoCommit
+        ;;
+    fetch)
         ;;
     #------------------------------------------------------------
     *)
