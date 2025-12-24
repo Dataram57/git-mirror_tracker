@@ -43,7 +43,6 @@ fi
 #Functions
 
 RepoWrite(){   #fileName #config
-    Print "Saving local config for $1"
     mkdir -p "$(dirname "$repoDir$1")"
     echo "$2" > "$repoDir$1"
 }
@@ -79,6 +78,7 @@ RepoCommit(){
 RepoStage(){
     cd "$repoDir"
     git add *
+    PrintSuccess "Changes have been staged."
     cd "$currentDir"
 }
 
@@ -170,7 +170,34 @@ Mark(){ #repoPath
 
     #stage repolist
     RepoStage
-    PrintSuccess "Track has been staged."
+}
+
+DeMark(){ #RepoName
+    #clean changes
+    RepoCleanChanges
+
+    #check if repo with such path and repoId has already been listed
+    i=$((1))
+    f=""
+    while IFS= read -r line; do
+        IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
+        #check
+        if [ "$1" = "$row_repoName" ]; then
+            f=$((i))
+            break
+        fi
+        i=$((i+1))
+    done < "$repoDir/repolist"
+
+    #remove if found
+    if [ ! -z "$f" ]; then
+        #remove line and stage
+        sed -i ""$f"d" "$repoDir/repolist"
+        PrintSuccess "Demarked \""$1"\"."
+        RepoStage
+    else
+        PrintError "No such repository marked as \""$1"\""
+    fi
 }
 
 List(){
@@ -223,6 +250,7 @@ Update(){
         repoId="$row_repoId"
 
         #now we can safely update the config
+        Print "Saving local config for $repoName"
         RepoWrite "config/"$repoName"" "$(git -C "$repoPath" config --local --list)"
 
         #next
@@ -230,7 +258,6 @@ Update(){
     
     #stage update
     RepoStage
-    Print "Update has been staged."
 }
 
 #================================================================
@@ -274,7 +301,7 @@ case "$1" in
         List
         ;;
     demark)
-        
+        DeMark $2
         ;;
     #------------------------------------------------------------
     export)
