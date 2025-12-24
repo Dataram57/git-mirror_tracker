@@ -89,7 +89,7 @@ GetRepoId(){
 #endregion
 
 #================================================================
-#Listing Management
+#region Listing Management
 
 #check if repolist file exists
 repoDir="$HOME"/.config/git-mirror_tracker/
@@ -100,10 +100,6 @@ fi
 
 #----------------------------------------------------------------
 #Functions
-
-# repoName      #the true id
-# repoID = git rev-list --max-parents=0 HEAD
-# repoPath
 
 Mark(){ #repoPath
     #repair repolist 
@@ -260,30 +256,50 @@ Update(){
     RepoStage
 }
 
+#endregion
+
+#================================================================
+#region Server benchmark???
+
+# - clones the specific repository
+# - applies associated local config
+# - updates associated repoPath to check for new local config changes
+Sync(){ #repoName
+
+}
+
+#
+
+
+
+#endregion
+
 #================================================================
 #region Commands
 
 case "$1" in
     #------------------------------------------------------------
+    #region Repository
+
     log)
         cd "$repoDir"
         git log
         ;;
+    
     status)
         cd "$repoDir"
         git status
         ;;
+    
     commit)
         RepoCommit
         ;;
-    stage)
-        Update
-        ;;
-    reset)
-        cd "$repoDir"
-        git reset --hard
-        ;;
+
+    #endregion
+
     #------------------------------------------------------------
+    #region Listing Management
+
     mark)
         if [ -z "$2" ]; then
             #current dir
@@ -297,22 +313,29 @@ case "$1" in
             done
         fi
         ;;
-    list)
-        List
-        ;;
+    
     demark)
         DeMark $2
         ;;
+    
+    list)
+        List
+        ;;
+    
+    update)
+        Update
+        ;;
+
+    #endregion
+
+
+
     #------------------------------------------------------------
     export)
         ;;
     import)
         ;;
     #------------------------------------------------------------
-    update)
-        Update
-        #RepoCommit
-        ;;
     fetch)
         ;;
     #------------------------------------------------------------
