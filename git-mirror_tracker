@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 currentDir=$(pwd)
 separator=$'\x3B'
-clear
+
 #================================================================
 #region Functions
 
@@ -16,6 +16,14 @@ Print(){
 
 PrintError(){
     echo -e "\033[0;31mError\033[0m: $1"
+}
+
+PrintSuccess(){
+    echo -e "\033[0;32mSucess\033[0m: $1"
+}
+
+PrintWarning(){
+    echo -e "\033[0;33mWarning\033[0m: $1"
 }
 
 #endregion
@@ -34,9 +42,15 @@ fi
 #----------------------------------------------------------------
 #Functions
 
-RepoUpdate(){   #fileName #config
+RepoWrite(){   #fileName #config
     Print "Saving local config for $1"
-    echo "$2" > "$repoDir$1"
+    Print "$2"
+    echo "$2" > "$repoDir/$1"
+}
+
+RepoDiscardChanges(){
+    cd "$repoDir"
+    git restore . && git clean -fd
 }
 
 RepoCommit(){
@@ -64,6 +78,10 @@ RepoCommit(){
 RepoStage(){
     cd "$repoDir"
     git add *
+}
+
+GetRepoId(){
+    git -C "$1" rev-list --max-parents=0 HEAD | tail -n 1
 }
 
 #endregion
@@ -103,19 +121,20 @@ Mark(){ #repoPath
     fi
 
     #get repoID
-    repoId=$(git -C "$repoPath" rev-list --max-parents=0 HEAD)
-    repoId=1
+    repoId=$(GetRepoId "$repoPath")
 
     #signal
     Print "Checking $repoPath"
 
-    #check if repo with such path has already been listed
+    #check if repo with such path and repoId has already been listed
     while IFS= read -r line; do
         IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
         #check
         if [ "$repoPath" = "$row_repoPath" ]; then
-            Print "Repository named \"$row_repoName\" already tracks $repoPath"
-            return
+            if [ "$repoId" = "$row_repoId" ]; then
+                Print "Repository named \"$row_repoName\" already tracks "$repoPath" with \""$repoId"\" as repoId."
+                return
+            fi
         fi
     done < "$repoDir/repolist"
 
@@ -142,7 +161,7 @@ Mark(){ #repoPath
 
     #Insert new entry
     echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
-    Print "Tracking \"$repoName\" at $repoPath"
+    PrintSuccess "Tracking \"$repoName\" at $repoPath"
 }
 
 List(){
@@ -152,29 +171,52 @@ List(){
     done < "$repoDir/repolist"
 }
 
-# no update if the dir doesn't exist anymore
 Update(){
-    #check baseDir
-    if [ -z "$1" ]; then
-        baseDir="$HOME"
-    else
-        baseDir="$1"
-    fi
-
-    #search
-    for dir in "$baseDir"/*; do
-        if [ -d "$dir/.git" ]; then
-            #echo "Git repository found: $dir"
-            #scope
-            cd "$dir"
-            #git config --local --list
-            RepoUpdate "${dir:${#baseDir} + 1}" "$(git config --local --list)"
-            #echo $(git remote -v)
+    #visit each marked repo
+    #this method will perform overwrites if there are more than 1 same row_repoPaths.
+    while IFS= read -r line; do
+        IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
+        #get repo vars
+        repoName="$row_repoName" 
+        repoPath="$row_repoPath"
+        #check if there is no git repo at repoPath
+        if [ ! -d "$repoPath/.git" ]; then
+            continue
         fi
-    done
+        repoId=$(GetRepoId "$repoPath")
+        #repo_* vars will now chagne
 
-    #stage
+        #check if there exists an entry that has the same repoPath and repoId
+        while IFS= read -r line; do
+            IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
+            #check if found the same case
+            if [ "$repoPath" = "$row_repoPath" ]; then
+                if [ "$repoId" = "$row_repoId" ]; then
+                    #update name of the file that will be updated
+                    repoName="$row_repoName"
+                    #mark info that found proper
+                    repoId=""
+                    break;
+                fi
+            fi
+        done < "$repoDir/repolist"        
+        #check if didn't found entry
+        if [ ! -z "$repoId" ]; then
+            #discard changes and print error of untracked repo
+            PrintError "Tracked repository at \""$repoPath"\" has repoId \""$row_repoId"\" that has not been marked yet."
+            Print "Discarding update."
+            RepoDiscardChanges
+            return
+        fi
+        repoId="$row_repoId"
+
+        #now we can safely update the config
+        RepoWrite "$repoName" "$(git -C "$repoPath" config --local --list)"
+
+        #next
+    done < "$repoDir/repolist"
     RepoStage
+    Print "All done"
 }
 
 #================================================================
@@ -202,17 +244,23 @@ case "$1" in
         ;;
     #------------------------------------------------------------
     mark)
-        shift
-        while [ $# -gt 0 ]; do
-            Mark "$1"
+        if [ -z "$2" ]; then
+            #current dir
+            Mark "$currentDir"
+        else
+            #many dirs
             shift
-        done
-        ;;
-    demark)
-
+            while [ $# -gt 0 ]; do
+                Mark "$1"
+                shift
+            done
+        fi
         ;;
     list)
         List
+        ;;
+    demark)
+        
         ;;
     #------------------------------------------------------------
     export)
