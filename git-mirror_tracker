@@ -44,13 +44,14 @@ fi
 
 RepoWrite(){   #fileName #config
     Print "Saving local config for $1"
-    Print "$2"
-    echo "$2" > "$repoDir/$1"
+    mkdir -p "$(dirname "$repoDir$1")"
+    echo "$2" > "$repoDir$1"
 }
 
-RepoDiscardChanges(){
+RepoCleanChanges(){
     cd "$repoDir"
     git restore . && git clean -fd
+    cd "$currentDir"
 }
 
 RepoCommit(){
@@ -78,6 +79,7 @@ RepoCommit(){
 RepoStage(){
     cd "$repoDir"
     git add *
+    cd "$currentDir"
 }
 
 GetRepoId(){
@@ -104,6 +106,9 @@ fi
 # repoPath
 
 Mark(){ #repoPath
+    #repair repolist 
+    RepoCleanChanges
+
     #correct argument
     repoPath="$1"
     if [ -z "$repoPath" ]; then
@@ -161,7 +166,11 @@ Mark(){ #repoPath
 
     #Insert new entry
     echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
-    PrintSuccess "Tracking \"$repoName\" at $repoPath"
+    PrintSuccess "Tracking \"$repoName\" at $repoPath."
+
+    #stage repolist
+    RepoStage
+    PrintSuccess "Track has been staged."
 }
 
 List(){
@@ -172,6 +181,9 @@ List(){
 }
 
 Update(){
+    #Clean untracked mess
+    RepoCleanChanges
+
     #visit each marked repo
     #this method will perform overwrites if there are more than 1 same row_repoPaths.
     while IFS= read -r line; do
@@ -205,18 +217,20 @@ Update(){
             #discard changes and print error of untracked repo
             PrintError "Tracked repository at \""$repoPath"\" has repoId \""$row_repoId"\" that has not been marked yet."
             Print "Discarding update."
-            RepoDiscardChanges
+            RepoCleanChanges
             return
         fi
         repoId="$row_repoId"
 
         #now we can safely update the config
-        RepoWrite "$repoName" "$(git -C "$repoPath" config --local --list)"
+        RepoWrite "config/"$repoName"" "$(git -C "$repoPath" config --local --list)"
 
         #next
     done < "$repoDir/repolist"
+    
+    #stage update
     RepoStage
-    Print "All done"
+    Print "Update has been staged."
 }
 
 #================================================================
