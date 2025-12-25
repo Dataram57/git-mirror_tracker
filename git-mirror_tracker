@@ -271,13 +271,14 @@ Sync(){ #repoName   #repoPath
     #Get repo index
     count=$((1))
     i=""
-        IFS="$separator" read -r repoName repoPath repoId <<< "$line"
+    while IFS= read -r line; do
+        IFS="$separator" read -r repoName old_repoPath repoId <<< "$line"
         #check
         if [ "$1" = "$repoName" ]; then
             i=$((count))
             break
         fi
-        count=$((i+1))
+        count=$((count+1))
     done < "$repoDir/repolist"
     if [ -z "$i" ]; then
         #remove line and stage
@@ -286,6 +287,7 @@ Sync(){ #repoName   #repoPath
     fi
 
     #correct repoPath (will update repoList)
+    repoPath="$old_repoPath"
     if [ ! -z "$2" ]; then
         repoPath="$(realpath "$2")"
     fi
@@ -299,24 +301,28 @@ Sync(){ #repoName   #repoPath
             if [ "$repoId" = $(GetRepoId "$repoPath") ]; then
                 #info
                 PrintSuccess "Repository \""$repoName"\" is already cloned."
-                
-                #Update only the repoPath in the repolist
-                Print "Updating the repoPath."
-                #remove old line
-                sed -i ""$i"d" "$repoDir/repolist"
-                #insert new entry
-                echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
+                #check if repoPath needs to be changed
+                if [ "$repoPath" = "$old_repoPath" ]; then
+                    Print "No changes are needed."
+                else
+                    #Update only the repoPath in the repolist
+                    Print "Updating the repoPath."
+                    #remove old line
+                    sed -i ""$i"d" "$repoDir/repolist"
+                    #insert new entry
+                    echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
 
-                #stage and return
-                RepoStage
+                    #stage and return
+                    RepoStage
+                fi
                 return
             else
                 #Can't clone into repo that has a different repo id
                 PrintError "Repository at "$repoPath" has different repoId."
                 return
             fi
-        #check if dir is not empty
-        else if [ ! -z "$(ls -A "$repoPath")" ]; then
+            #check if dir is not empty
+        elif [ ! -z "$(ls -A "$repoPath")" ]; then
             PrintError "Directory "$repoPath" is not empty."
             return
         fi
@@ -330,6 +336,7 @@ Sync(){ #repoName   #repoPath
     #or - add new repo
 
     #commit
+    echo 1
 
 }
 
