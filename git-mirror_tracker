@@ -343,6 +343,9 @@ Sync(){ #repoName   #repoPath
 #
 
 # - Audits specific repository sources
+# - no repository cloning, but fetches and pulls instead.
+# - `git rev-list --left-right --count origin/main...main`
+# - `git status` for every branch
 Audit(){
     echo 1
 }
