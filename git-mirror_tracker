@@ -259,17 +259,86 @@ Update(){
 #endregion
 
 #================================================================
-#region Server benchmark???
+#region Remote Server Actions
 
 # - clones the specific repository
 # - applies associated local config
 # - updates associated repoPath to check for new local config changes
-Sync(){ #repoName
+Sync(){ #repoName   #repoPath
+    #Clean untracked mess
+    RepoCleanChanges
+
+    #Get repo index
+    count=$((1))
+    i=""
+        IFS="$separator" read -r repoName repoPath repoId <<< "$line"
+        #check
+        if [ "$1" = "$repoName" ]; then
+            i=$((count))
+            break
+        fi
+        count=$((i+1))
+    done < "$repoDir/repolist"
+    if [ -z "$i" ]; then
+        #remove line and stage
+        PrintError "No such repository marked as \""$1"\""
+        return
+    fi
+
+    #correct repoPath (will update repoList)
+    if [ ! -z "$2" ]; then
+        repoPath="$(realpath "$2")"
+    fi
+
+    #check if repository already exists
+    if [ -d "$repoPath" ]; then
+        #check if dir has a repo
+        if [ -d "$repoPath/.git" ]; then
+            #no cloning is needed
+            #check what kind of repo is this
+            if [ "$repoId" = $(GetRepoId "$repoPath") ]; then
+                #info
+                PrintSuccess "Repository \""$repoName"\" is already cloned."
+                
+                #Update only the repoPath in the repolist
+                Print "Updating the repoPath."
+                #remove old line
+                sed -i ""$i"d" "$repoDir/repolist"
+                #insert new entry
+                echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
+
+                #stage and return
+                RepoStage
+                return
+            else
+                #Can't clone into repo that has a different repo id
+                PrintError "Repository at "$repoPath" has different repoId."
+                return
+            fi
+        #check if dir is not empty
+        else if [ ! -z "$(ls -A "$repoPath")" ]; then
+            PrintError "Directory "$repoPath" is not empty."
+            return
+        fi
+    fi
+
+    #clone repo to a temporary directory
+    
+    #check cloned repo's repoId
+
+    #either - update repoPath
+    #or - add new repo
+
+    #commit
 
 }
 
 #
 
+# - Audits specific repository sources
+Audit(){
+    echo 1
+}
 
 
 #endregion
@@ -328,7 +397,14 @@ case "$1" in
 
     #endregion
 
+    #------------------------------------------------------------
+    #region Remote Server Actions
 
+    sync)
+        Sync $2 $3
+        ;;
+
+    #endregion
 
     #------------------------------------------------------------
     export)
