@@ -471,9 +471,10 @@ Sync(){ #repoName   #repoPath
 #
 
 # - Audits specific repository sources
-# - no repository cloning, but fetches and pulls instead.
+# - no repository cloning, but simple queries
 # - `git rev-list --left-right --count origin/main...main`
-# - `git status` for every branch
+# - `git ls-remote origin`
+# - `git show-ref`
 Audit(){
     echo 1
 }
@@ -540,6 +541,10 @@ case "$1" in
 
     sync)
         Sync $2 $3
+        ;;
+
+    audit)
+        Audit $2
         ;;
 
     #endregion
