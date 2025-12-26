@@ -83,6 +83,7 @@ RepoStage(){
 }
 
 GetRepoId(){
+    #this should not only limit the result to just 1 line but to all
     git -C "$1" rev-list --max-parents=0 HEAD | tail -n 1
 }
 
@@ -270,17 +271,17 @@ Sync(){ #repoName   #repoPath
 
     #Get repo index
     count=$((1))
-    i=""
+    repoIndex=""
     while IFS= read -r line; do
         IFS="$separator" read -r repoName old_repoPath repoId <<< "$line"
         #check
         if [ "$1" = "$repoName" ]; then
-            i=$((count))
+            repoIndex=$((count))
             break
         fi
         count=$((count+1))
     done < "$repoDir/repolist"
-    if [ -z "$i" ]; then
+    if [ -z "$repoIndex" ]; then
         #remove line and stage
         PrintError "No such repository marked as \""$1"\""
         return
@@ -308,7 +309,7 @@ Sync(){ #repoName   #repoPath
                     #Update only the repoPath in the repolist
                     Print "Updating the repoPath."
                     #remove old line
-                    sed -i ""$i"d" "$repoDir/repolist"
+                    sed -i ""$repoIndex"d" "$repoDir/repolist"
                     #insert new entry
                     echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
 
@@ -327,16 +328,95 @@ Sync(){ #repoName   #repoPath
             return
         fi
     fi
+    
+    #get remotes
+    remotes=()
+    urls=()
+    while IFS= read -r line; do
+        #filter
+        [[ $line == remote.*.url=* ]] || continue
+        #get values
+        remote=${line#remote.}
+        remote=${remote%%.*}
+        url=${line#*=}
+        #add elements
+        remotes+=("$remote")
+        urls+=("$url")
+    done < "$repoDir/config/$repoName"
+    
+    #select remote
+    selectedUrl=""
+    if [ "${#remotes[@]}" = "0" ]; then
+        #error
+        PrintError "Repository \"$repoName\" has no local remotes to clone from."
+        return
+    elif [ "${#remotes[@]}" = "133" ]; then
+        #default select
+        selectedUrl=0
+    else
+        #Select remote
+        echo "Select remote repository to clone from"
+        for i in "${!remotes[@]}"; do
+            echo -e "\033[0;35m${remotes[$i]}\033[0m) ${urls[$i]}"
+        done
+        
+        #selection loop
+        selectedUrl=""
+        while true; do
+            read -p "> " selectedUrl
+            found=false
+            for i in "${!remotes[@]}"; do
+                if [[ "${remotes[$i]}" == "$selectedUrl" ]]; then
+                    selectedUrl="$i"
+                    found=true
+                    break
+                fi
+            done
+            $found && break
+            PrintError "Invalid selection, try again."
+        done
+    fi
 
     #clone repo to a temporary directory
-    
-    #check cloned repo's repoId
+    Print "Cloning from ${remotes[$selectedUrl]}(${urls[$selectedUrl]})"
+    rm -rf ""$repoDir"temp"
+    git clone "${urls[$selectedUrl]}" ""$repoDir"temp"
 
+    #check cloned repo's repoId
+    new_repoId=$(GetRepoId ""$repoDir"temp")
+
+    #compare ids
+    if [ "$repoId" = "$new_repoId" ]; then
+        PrintSuccess "Cloned repository matches expected repoId."
+        Print "Updating repoPath."
+        #remove old line
+        sed -i ""$repoIndex"d" "$repoDir/repolist"
+        #insert new entry
+        echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
+    else
+        #mark a new repo completely
+                
+        return
+    fi;
+
+    #applying local config
+    Print "Applying local config."
+    cd ""$repoDir"temp"
+    while IFS= read -r line; do
+        IFS="=" read -r param_name param_value <<< "$line"
+        git config --local "$param_name" "$param_value"
+    done < "$repoDir/config/$repoName"
+    git config --local --list
+
+    #move temp repo to proper path
+    Print "Moving new repo to "$repoPath""
+    #mv ""$repoDir"temp" "$repoPath"
+
+    
     #either - update repoPath
     #or - add new repo
 
     #commit
-    echo 1
 
 }
 
