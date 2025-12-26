@@ -4,4 +4,4 @@
 
 ### Problems?
 
-- Forks have the same root commit hashes. repoPath and repoName is what can then distingioush these repos.
+- Forks have the same root commit hashes. repoPath and repoName is what can then distinguish these repos.
