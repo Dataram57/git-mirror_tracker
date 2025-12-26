@@ -144,7 +144,7 @@ Mark(){ #repoPath
     repoName=""
     while [ -z "$repoName" ]; do
         #get name
-        read -p "Name for $repoPath (default: $(basename "$repoPath")):" repoName
+        read -p "Name for $repoPath (default: $(basename "$repoPath"))> " repoName
         if [ -z "$repoName" ]; then
             repoName=$(basename "$repoPath")
         fi
@@ -262,9 +262,6 @@ Update(){
 #================================================================
 #region Remote Server Actions
 
-# - clones the specific repository
-# - applies associated local config
-# - updates associated repoPath to check for new local config changes
 Sync(){ #repoName   #repoPath
     #Clean untracked mess
     RepoCleanChanges
@@ -319,7 +316,7 @@ Sync(){ #repoName   #repoPath
                 return
             else
                 #Can't clone into repo that has a different repo id
-                PrintError "Repository at "$repoPath" has different repoId."
+                PrintError "Directory "$repoPath" is already occupied by a different repository with a different repoId."
                 return
             fi
             #check if dir is not empty
@@ -329,6 +326,12 @@ Sync(){ #repoName   #repoPath
         fi
     fi
     
+    #check if local config exists
+    if [ ! -f ""$repoDir"config/"$repoName"" ]; then
+        PrintError "Repository \"$repoName\" has no local config saved."
+        return
+    fi
+
     #get remotes
     remotes=()
     urls=()
@@ -350,7 +353,8 @@ Sync(){ #repoName   #repoPath
         #error
         PrintError "Repository \"$repoName\" has no local remotes to clone from."
         return
-    elif [ "${#remotes[@]}" = "133" ]; then
+    elif [ "${#remotes[@]}" = "1" ]; then
+        Print "Selecting the only remote (${remotes[$selectedUrl]})."
         #default select
         selectedUrl=0
     else
@@ -378,12 +382,18 @@ Sync(){ #repoName   #repoPath
     fi
 
     #clone repo to a temporary directory
-    Print "Cloning from ${remotes[$selectedUrl]}(${urls[$selectedUrl]})"
+    Print "Cloning from [${remotes[$selectedUrl]}](${urls[$selectedUrl]})"
     rm -rf ""$repoDir"temp"
     git clone "${urls[$selectedUrl]}" ""$repoDir"temp"
 
+    #remember old repo name
+    old_repoName="$repoName"
+
     #check cloned repo's repoId
     new_repoId=$(GetRepoId ""$repoDir"temp")
+
+    #default actions
+    doApplyConfig=true
 
     #compare ids
     if [ "$repoId" = "$new_repoId" ]; then
@@ -395,29 +405,67 @@ Sync(){ #repoName   #repoPath
         echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
     else
         #mark a new repo completely
-                
-        return
+        PrintWarning "Remote [${remotes[$selectedUrl]}](${urls[$selectedUrl]}) seem to be using different repoId than expected."
+        Print "Attempting to mark this repository as new."
+
+        #update repoId
+        repoId="$new_repoId"
+
+        #mark as new
+        echo -e "\033[0;35mDo you want to mark this repository as new?\033[0m (type \033[0;35myes\033[0m for yes)"
+        read -p "> " doApplyConfig
+        if [ "$doApplyConfig" = 'yes' ]; then
+            #name picking procedure
+            repoName=""
+            while [ -z "$repoName" ]; do
+                #get name
+                read -p "Repository name> " repoName
+
+                #check if repo with such name has already been listed
+                while IFS= read -r line; do
+                    IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
+                    #check
+                    if [ "$repoName" = "$row_repoName" ]; then
+                        PrintError "Repository named \"$repoName\" already exists"
+                        repoName=""
+                        break
+                    fi
+                done < "$repoDir/repolist"
+            done
+
+            #Insert new entry
+            echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
+            PrintSuccess "Tracking \"$repoName\" at $repoPath."
+            PrintWarning "It's recommended to run \`update\` command after marking a new repository."
+        fi 
+
+        #apply config check
+        echo -e "\033[0;35mDo you want apply the existing config?\033[0m (type \033[0;35myes\033[0m for yes)"
+        read -p "> " doApplyConfig
+        if [ "$doApplyConfig" = 'yes' ]; then
+            doApplyConfig=true
+        else
+            doApplyConfig=false
+        fi
     fi;
 
     #applying local config
-    Print "Applying local config."
-    cd ""$repoDir"temp"
-    while IFS= read -r line; do
-        IFS="=" read -r param_name param_value <<< "$line"
-        git config --local "$param_name" "$param_value"
-    done < "$repoDir/config/$repoName"
-    git config --local --list
+    if [[ $doApplyConfig == true ]]; then
+        Print "Applying local config."
+        cd ""$repoDir"temp"
+        while IFS= read -r line; do
+            IFS="=" read -r param_name param_value <<< "$line"
+            git config --local "$param_name" "$param_value"
+        done < "$repoDir/config/$old_repoName"
+        git config --local --list
+    fi
 
     #move temp repo to proper path
     Print "Moving new repo to "$repoPath""
-    #mv ""$repoDir"temp" "$repoPath"
+    mv ""$repoDir"temp" "$repoPath"
 
-    
-    #either - update repoPath
-    #or - add new repo
-
-    #commit
-
+    #stage
+    RepoStage
 }
 
 #
