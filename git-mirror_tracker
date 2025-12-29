@@ -509,7 +509,7 @@ AuditSingle(){ #repoName repoPath repoId
         if [[ $allow_clone == true ]]; then
             #clone and check again
             PrintSubError "Running \`git clone\` is currently not supported. Failed to audit repository \"$repoName\""
-            printf "\n\n$repoName) exception clone" >> "$logsFile"
+            printf "\n\n%s) exception clone\n" "$repoName" >> "$logsFile"
             return
         else
             #error if fetch is required
@@ -526,7 +526,7 @@ AuditSingle(){ #repoName repoPath repoId
 
     if [[ $allow_fetch == true ]]; then
         Print "Full audit for repository \"$repoName\""
-        printf "\n\n$repoName) audit full" >> "$logsFile"
+        printf "\n\n%s) audit full\n" "$repoName" >> "$logsFile"
 
         while IFS= read -r line; do
             [[ $line == remote.*.url=* ]] || continue
@@ -552,7 +552,7 @@ AuditSingle(){ #repoName repoPath repoId
 
     elif [[ $allow_lsremote == true ]]; then
         Print "Quick audit for repository \"$repoName\""
-        printf "\n\n$repoName) audit quick" >> "$logsFile"
+        printf "\n\n%s) audit quick\n" "$repoName" >> "$logsFile"
         #load config and query remotes
         while IFS= read -r line; do
             #filter
@@ -565,7 +565,7 @@ AuditSingle(){ #repoName repoPath repoId
             url=${line#*=}
 
             #logs
-            printf "\n\n$repoName.$remote) running \`git ls-remote "$url"\`:\n" >> "$logsFile"
+            printf "\n\n%s.%s) running \`git ls-remote %s\`:\n" "$repoName" "$remote" "$url" >> "$logsFile"
     
             #query + log
             output=$(git ls-remote "$url")
