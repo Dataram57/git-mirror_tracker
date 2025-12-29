@@ -476,9 +476,6 @@ Sync(){ #repoName   #repoPath
     RepoStage
 }
 
-#
-
-
 AuditSingle(){ #repoName repoPath repoId
     logsFile="$repoDir/audit_logs"
     repoName="$1"
@@ -623,11 +620,6 @@ AuditSingle(){ #repoName repoPath repoId
     printf "\n\n$repoName) score $countSuccess/$countAll" >> "$logsFile"
 }
 
-# - Audits specific repository sources
-# - no repository cloning, but simple queries
-# - `git rev-list --left-right --count origin/main...main`
-# - `git ls-remote origin`
-# - `git show-ref`
 Audit(){
     #clean logs
     logsFile="$repoDir/audit_logs"
