@@ -279,6 +279,18 @@ Update(){
 #================================================================
 #region Remote Server Actions
 
+Sync_UpdateRepoPath(){
+    echo -e "\033[0;35mDo you want to update repository \"$repoName\" captured path to $repoPath?\033[0m (type \033[0;35myes\033[0m for yes)"
+    read -p "> " doUpdatePath
+    if [ "$doUpdatePath" = yes ]; then
+        Print "Updating the repoPath."
+        #remove old line
+        sed -i ""$repoIndex"d" "$repoDir/repolist"
+        #insert new entry
+        echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
+    fi
+}
+
 Sync(){ #repoName   #repoPath
     #Clean untracked mess
     RepoCleanChanges
@@ -320,12 +332,7 @@ Sync(){ #repoName   #repoPath
                 if [ "$repoPath" = "$old_repoPath" ]; then
                     Print "No changes are needed."
                 else
-                    #Update only the repoPath in the repolist
-                    Print "Updating the repoPath."
-                    #remove old line
-                    sed -i ""$repoIndex"d" "$repoDir/repolist"
-                    #insert new entry
-                    echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
+                    Sync_UpdateRepoPath
 
                     #stage and return
                     RepoStage
@@ -415,11 +422,7 @@ Sync(){ #repoName   #repoPath
     #compare ids
     if [ "$repoId" = "$new_repoId" ]; then
         PrintSuccess "Cloned repository matches expected repoId."
-        Print "Updating repoPath."
-        #remove old line
-        sed -i ""$repoIndex"d" "$repoDir/repolist"
-        #insert new entry
-        echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
+        Sync_UpdateRepoPath
     else
         #mark a new repo completely
         PrintWarning "Remote [${remotes[$selectedUrl]}](${urls[$selectedUrl]}) seem to be using different repoId than expected."
