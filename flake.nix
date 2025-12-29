@@ -1,46 +1,60 @@
 {
-    description = "git-mirror_tracker";
+  description = "git-mirror_tracker CLI tool with wrapper";
 
-    inputs = {
-        nixpkgs.url = "github:NixOS/nixpkgs/master";
-    };
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  };
 
-    outputs = { self, nixpkgs }:
-    let
-        systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+  outputs = { self, nixpkgs }:
+  let
+    systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+    forAllSystems = nixpkgs.lib.genAttrs systems;
+  in
+  {
+    packages = forAllSystems (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+      in
+      {
+        git-mirror_tracker = pkgs.stdenv.mkDerivation {
+          pname = "git-mirror_tracker";
+          version = "1.0";
 
-        forAllSystems = nixpkgs.lib.genAttrs systems;
+          # Script is source
+          src = ./git-mirror_tracker;
 
-    in {
-        packages = forAllSystems (system:
-        let
-            pkgs = import nixpkgs { inherit system; };
-        in {
-            git-mirror_tracker = pkgs.writeShellApplication {
-                name = "git-mirror_tracker";
+          # Build dependencies
+          buildInputs = [ pkgs.makeWrapper pkgs.git ];
 
-                # Runtime dependencies
-                runtimeInputs = [
-                    pkgs.git
-                ];
+          # Skip unpacking since it's a single file
+          unpackPhase = ":";
 
-                # The script contents
-                text = builtins.readFile ./git-mirror_tracker;
+          # Install phase: use makeWrapper to set PATH
+          installPhase = ''
+            mkdir -p $out/bin
+            cp $src $out/bin/git-mirror_tracker.orig
+            chmod +x $out/bin/git-mirror_tracker.orig
 
-                checkPhase = null;
-            };
-
-            default = self.packages.${system}.git-mirror_tracker;
-        }
-        );
-
-        apps = forAllSystems (system: {
-        git-mirror_tracker = {
-            type = "app";
-            program = "${self.packages.${system}.git-mirror_tracker}/bin/git-mirror_tracker";
+            # Wrap the script so git is in PATH
+            wrapProgram $out/bin/git-mirror_tracker.orig \
+              --prefix PATH : "${pkgs.git}/bin" \
+              --set SCRIPT "$out/bin/git-mirror_tracker.orig" \
+              --run-command '$SCRIPT "$@"' \
+              --suffix "-wrapper"
+            
+            # Symlink wrapper to final name
+            mv $out/bin/git-mirror_tracker.orig-wrapper $out/bin/git-mirror_tracker
+          '';
         };
+      }
+    );
 
-        default = self.apps.${system}.git-mirror_tracker;
-        });
-    };
+    apps = forAllSystems (system: {
+      git-mirror_tracker = {
+        type = "app";
+        program = "${self.packages.${system}.git-mirror_tracker}/bin/git-mirror_tracker";
+      };
+      default = self.apps.${system}.git-mirror_tracker;
+    });
+  };
 }
