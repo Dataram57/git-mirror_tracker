@@ -1,46 +1,52 @@
 {
-    description = "git-mirror_tracker";
+  description = "git-mirror_tracker CLI tool";
 
-    inputs = {
-        nixpkgs.url = "github:NixOS/nixpkgs/master";
-    };
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  };
 
-    outputs = { self, nixpkgs }:
-    let
-        systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+  outputs = { self, nixpkgs }: 
+  let
+    systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+    forAllSystems = nixpkgs.lib.genAttrs systems;
+  in
+  {
+    packages = forAllSystems (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+      in {
+        git-mirror_tracker = pkgs.stdenv.mkDerivation {
+          pname = "git-mirror_tracker";
+          version = "1.0";
 
-        forAllSystems = nixpkgs.lib.genAttrs systems;
+          # Script as the source
+          src = ./git-mirror_tracker;
 
-    in {
-        packages = forAllSystems (system:
-        let
-            pkgs = import nixpkgs { inherit system; };
-        in {
-            git-mirror_tracker = pkgs.writeShellApplication {
-                name = "git-mirror_tracker";
+          # Ensure git is available
+          buildInputs = [ pkgs.git ];
 
-                # Runtime dependencies
-                runtimeInputs = [
-                    pkgs.git
-                ];
+          # Install the script as a command
+          installPhase = ''
+            mkdir -p $out/bin
+            cp $src $out/bin/git-mirror_tracker
+            chmod +x $out/bin/git-mirror_tracker
+          '';
 
-                # The script contents
-                text = builtins.readFile ./git-mirror_tracker;
-
-                checkPhase = null;
-            };
-
-            default = self.packages.${system}.git-mirror_tracker;
-        }
-        );
-
-        apps = forAllSystems (system: {
-        git-mirror_tracker = {
-            type = "app";
-            program = "${self.packages.${system}.git-mirror_tracker}/bin/git-mirror_tracker";
+          meta = with pkgs.lib; {
+            description = "CLI tool to track git mirrors";
+            license = licenses.mit;
+            maintainers = [ maintainers.example ];
+          };
         };
+      }
+    );
 
-        default = self.apps.${system}.git-mirror_tracker;
-        });
-    };
+    apps = forAllSystems (system: {
+      git-mirror_tracker = {
+        type = "app";
+        program = "${self.packages.${system}.git-mirror_tracker}/bin/git-mirror_tracker";
+      };
+      default = self.apps.${system}.git-mirror_tracker;
+    });
+  };
 }
