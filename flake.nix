@@ -2,7 +2,7 @@
     description = "git-mirror_tracker";
 
     inputs = {
-        nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+        nixpkgs.url = "github:NixOS/nixpkgs/master";
     };
 
     outputs = { self, nixpkgs }:
