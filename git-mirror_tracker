@@ -479,50 +479,89 @@ Audit(){
     #best audit is performed on currently holded repositories as they hold commitments
     #check all existing repos
     while IFS= read -r line; do
-        IFS="$separator" read -r row_repoName row_repoPath row_repoId <<< "$line"
+        IFS="$separator" read -r repoName repoPath repoId <<< "$line"
         
         #audit option vars
         allow_clone=false
         allow_lsremote=true                
-        allow_fetch=true
+        allow_fetch=false
 
         #check repoId
         check_repoId=""
-        if [ -d "$row_repoPath" ]; then
-            if [ -d "$row_repoPath/.git" ]; then
-                check_repoId=$(GetRepoId "$row_repoPath")
+        if [ -d "$repoPath" ]; then
+            if [ -d "$repoPath/.git" ]; then
+                check_repoId=$(GetRepoId "$repoPath")
             fi
         fi
         #check need for cloning
-        if [ ! "$check_repoId" = "$row_repoId" ]; then
+        if [ ! "$check_repoId" = "$repoId" ]; then
             if [[ $allow_clone == true ]]; then
                 #clone and check again
-                PrintError "Couldn't perform \`git clone\` for \""$row_repoName"\""
+                PrintError "Couldn't perform \`git clone\` for \""$repoName"\""
                 continue
             else
                 #error if fetch is required
                 if [[ $allow_fetch == true ]]; then
-                    PrintWarning "Can't perform fetches on \"$row_repoName\"."
+                    PrintWarning "Can't perform fetches on \"$repoName\"."
                     allow_fetch=false
                 fi
             fi
         fi
 
+        #stats
+        countSuccess=0
+        countAll=0
+
         #can check server responses only
 
         if [[ $allow_lsremote == true && $allow_fetch == true ]]; then
-            Print "Performing Full Audit of \"$row_repoName\"."
+            Print "Performing Full Audit of \"$repoName\"."
 
 
         elif [[ $allow_lsremote == true ]]; then
-            Print "Performing Remote Audit of \"$row_repoName\"."
+            Print "Performing Remote Audit of \"$repoName\"."
+
+            #load saved local config
+            if [ ! -f "$repoDir/config/$repoName" ]; then
+                PrintError "$repoName has no local config saved."
+                return
+            fi
+
+            #load config and query remotes
+            while IFS= read -r line; do
+                #filter
+                [[ $line == remote.*.url=* ]] || continue
+                #count
+                countAll=$((countAll + 1))
+                #get values
+                remote=${line#remote.}
+                remote=${remote%%.*}
+                url=${line#*=}
+                
+                #query
+                output=$(git ls-remote "$url")
+                if [ $? -ne 0 ]; then
+                    PrintError "Remote \"$remote\" of repository \"$repoName\", failed to respond correctly."
+                else
+                    countSuccess=$((countSuccess + 1))
+                fi
+            done < "$repoDir/config/$repoName"
+
+            #print stats
+            if [ "$countAll" -eq "$countSuccess" ]; then
+                PrintSuccess "All remotes of repository \"$repoName\" have responded successfully."
+            elif [ "$countSuccess" -eq 0 ]; then
+                PrintError "All remotes of repository \"$repoName\" have failed to respond properly."
+            else
+                PrintWarning "Only $countSuccess/$countAll of repository \"$repoName\" remotes have responded successfully."
+            fi
 
 
         elif [[ $allow_fetch == true ]]; then
-            Print "Performing Commit History Audit of \"$row_repoName\"."
+            Print "Performing Commit History Audit of \"$repoName\"."
 
         else
-            PrintError "No Audit can be made for \"$row_repoName\"."
+            PrintError "No Audit can be made for \"$repoName\"."
         fi
         
         
