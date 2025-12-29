@@ -476,6 +476,9 @@ Sync(){ #repoName   #repoPath
 # - `git ls-remote origin`
 # - `git show-ref`
 Audit(){
+    #clean logs
+    rm "$repoDir/audit_logs"
+
     #best audit is performed on currently holded repositories as they hold commitments
     #check all existing repos
     while IFS= read -r line; do
@@ -484,7 +487,7 @@ Audit(){
         #audit option vars
         allow_clone=false
         allow_lsremote=true                
-        allow_fetch=false
+        allow_fetch=true
 
         #check repoId
         check_repoId=""
@@ -508,12 +511,14 @@ Audit(){
             fi
         fi
 
+        #logs
+        printf "\n================================================================" >> "$repoDir/audit_logs"
+
         #stats
         countSuccess=0
         countAll=0
 
-        #can check server responses only
-
+        #cases
         if [[ $allow_lsremote == true && $allow_fetch == true ]]; then
             Print "Performing Full Audit of \"$repoName\"."
 
@@ -538,6 +543,9 @@ Audit(){
                 remote=${remote%%.*}
                 url=${line#*=}
                 
+                #logs
+                printf "\n\n$repoName.$remote) Running \`git ls-remote "$url"\`:\n" >> "$repoDir/audit_logs"
+        
                 #query
                 output=$(git ls-remote "$url")
                 if [ $? -ne 0 ]; then
@@ -545,6 +553,10 @@ Audit(){
                 else
                     countSuccess=$((countSuccess + 1))
                 fi
+
+                #logs
+                printf "$output" >> "$repoDir/audit_logs"
+
             done < "$repoDir/config/$repoName"
 
             #print stats
@@ -581,7 +593,7 @@ case "$1" in
     #------------------------------------------------------------
     #region Repository
 
-    log)
+    history)
         cd "$repoDir"
         git log
         ;;
@@ -637,6 +649,10 @@ case "$1" in
 
     audit)
         Audit $2
+        ;;
+    
+    logs)
+        less "$repoDir/audit_logs" 
         ;;
 
     #endregion
