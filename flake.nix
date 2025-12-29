@@ -20,30 +20,20 @@
           pname = "git-mirror_tracker";
           version = "1.0";
 
-          # Script is source
           src = ./git-mirror_tracker;
 
-          # Build dependencies
           buildInputs = [ pkgs.makeWrapper pkgs.git ];
 
-          # Skip unpacking since it's a single file
-          unpackPhase = ":";
+          unpackPhase = ":";  # skip unpack
 
-          # Install phase: use makeWrapper to set PATH
           installPhase = ''
             mkdir -p $out/bin
-            cp $src $out/bin/git-mirror_tracker.orig
-            chmod +x $out/bin/git-mirror_tracker.orig
+            cp $src $out/bin/git-mirror_tracker
+            chmod +x $out/bin/git-mirror_tracker
 
             # Wrap the script so git is in PATH
-            wrapProgram $out/bin/git-mirror_tracker.orig \
-              --prefix PATH : "${pkgs.git}/bin" \
-              --set SCRIPT "$out/bin/git-mirror_tracker.orig" \
-              --run-command '$SCRIPT "$@"' \
-              --suffix "-wrapper"
-            
-            # Symlink wrapper to final name
-            mv $out/bin/git-mirror_tracker.orig-wrapper $out/bin/git-mirror_tracker
+            wrapProgram $out/bin/git-mirror_tracker \
+              --prefix PATH : "${pkgs.git}/bin"
           '';
         };
       }
