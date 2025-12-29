@@ -26,6 +26,8 @@
 
                 # The script contents
                 text = builtins.readFile ./git-mirror_tracker;
+
+                checkPhase = null;
             };
 
             default = self.packages.${system}.git-mirror_tracker;
