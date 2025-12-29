@@ -280,14 +280,16 @@ Update(){
 #region Remote Server Actions
 
 Sync_UpdateRepoPath(){
-    echo -e "\033[0;35mDo you want to update repository \"$repoName\" captured path to $repoPath?\033[0m (type \033[0;35myes\033[0m for yes)"
-    read -p "> " doUpdatePath
-    if [ "$doUpdatePath" = yes ]; then
-        Print "Updating the repoPath."
-        #remove old line
-        sed -i ""$repoIndex"d" "$repoDir/repolist"
-        #insert new entry
-        echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
+    if [ ! "$old_repoPath" = "$repoPath" ]; then 
+        echo -e "\033[0;35mDo you want to update repository \"$repoName\" captured path to $repoPath?\033[0m (type \033[0;35myes\033[0m for yes)"
+        read -p "> " doUpdatePath
+        if [ "$doUpdatePath" = yes ]; then
+            Print "Updating the repoPath."
+            #remove old line
+            sed -i ""$repoIndex"d" "$repoDir/repolist"
+            #insert new entry
+            echo "${repoName}${separator}${repoPath}${separator}${repoId}" >> "$repoDir/repolist"
+        fi
     fi
 }
 
