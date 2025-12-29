@@ -617,7 +617,8 @@ AuditSingle(){ #repoName repoPath repoId
     else
         PrintWarning "Only $countSuccess/$countAll of repository \"$repoName\" remotes have passed the test."
     fi
-    printf "\n\n$repoName) score $countSuccess/$countAll" >> "$logsFile"
+    printf "\n\n%s) score %s/%s" "$repoName" "$countSuccess" "$countAll" >> "$logsFile"
+
 }
 
 Audit(){
