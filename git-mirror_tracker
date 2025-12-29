@@ -18,12 +18,20 @@ PrintError(){
     echo -e "\033[0;31mError\033[0m: $1"
 }
 
+PrintSubError(){
+    echo -e "\033[0;31m\$\033[0m: $1"
+}
+
 PrintSuccess(){
     echo -e "\033[0;32mSucess\033[0m: $1"
 }
 
 PrintWarning(){
     echo -e "\033[0;33mWarning\033[0m: $1"
+}
+
+PrintSubWarning(){
+    echo -e "\033[0;33m\$\033[0m: $1"
 }
 
 #endregion
@@ -477,7 +485,8 @@ Sync(){ #repoName   #repoPath
 # - `git show-ref`
 Audit(){
     #clean logs
-    rm "$repoDir/audit_logs"
+    logsFile="$repoDir/audit_logs"
+    rm "$logsFile"
 
     #best audit is performed on currently holded repositories as they hold commitments
     #check all existing repos
@@ -493,7 +502,7 @@ Audit(){
         #audit option vars
         allow_clone=false
         allow_lsremote=true                
-        allow_fetch=false
+        allow_fetch=true
 
         #check repoId
         check_repoId=""
@@ -506,19 +515,19 @@ Audit(){
         if [ ! "$check_repoId" = "$repoId" ]; then
             if [[ $allow_clone == true ]]; then
                 #clone and check again
-                PrintError "Couldn't perform \`git clone\` for \""$repoName"\""
+                PrintSubError "Couldn't perform \`git clone\` for \""$repoName"\""
                 continue
             else
                 #error if fetch is required
                 if [[ $allow_fetch == true ]]; then
-                    PrintWarning "Can't perform fetches on \"$repoName\"."
+                    PrintSubWarning "Can't perform fetches on \"$repoName\"."
                     allow_fetch=false
                 fi
             fi
         fi
 
         #logs
-        printf "\n================================================================" >> "$repoDir/audit_logs"
+        printf "\n================================================================" >> "$logsFile"
 
         #stats
         countSuccess=0
@@ -526,9 +535,7 @@ Audit(){
 
         if [[ $allow_fetch == true ]]; then
             Print "Full audit for repository \"$repoName\""
-            # -------------------------------
-            # Fetch each remote from config and report failures
-            # -------------------------------
+            printf "\n\n$repoName) audit full" >> "$logsFile"
 
             while IFS= read -r line; do
                 [[ $line == remote.*.url=* ]] || continue
@@ -538,90 +545,77 @@ Audit(){
                 remote=${remote%%.*}
                 url=${line#*=}
 
-                printf "\n\n$repoName.$remote) Running \`git fetch $remote\`\n" >> "$repoDir/audit_logs"
+                printf "\n\n$repoName.$remote) running \`git fetch $remote\`\n" >> "$logsFile"
 
-                if git -C "$repoPath" fetch "$remote" >/dev/null 2>&1; then
+                output=$(git -C "$repoPath" fetch "$remote" --quiet 2>&1)
+                exitCode=$?
+                echo "$output" >> "$logsFile"
+
+                if [ "$exitCode" -eq 0 ]; then
                     #PrintSuccess "Remote \"$remote\" responded successfully."
                     countSuccess=$((countSuccess + 1))
                 else
-                    PrintWarning "Remote \"$remote\" from repository \"$repoName\" failed to respond."
+                    PrintSubError "Remote \"$remote\" from repository \"$repoName\" failed to respond."
                 fi
             done < "$repoDir/config/$repoName"
 
         elif [[ $allow_lsremote == true ]]; then
-            #check if repo exists locally
-            if [ -d "$repoPath" ]; then
-                Print "Quick audit for repository \"$repoName\""
-                #load config and query remotes
-                while IFS= read -r line; do
-                    #filter
-                    [[ $line == remote.*.url=* ]] || continue
-                    #count
-                    countAll=$((countAll + 1))
-                    #get values
-                    remote=${line#remote.}
-                    remote=${remote%%.*}
-                    url=${line#*=}
+            Print "Quick audit for repository \"$repoName\""
+            printf "\n\n$repoName) audit quick" >> "$logsFile"
+            #load config and query remotes
+            while IFS= read -r line; do
+                #filter
+                [[ $line == remote.*.url=* ]] || continue
+                #count
+                countAll=$((countAll + 1))
+                #get values
+                remote=${line#remote.}
+                remote=${remote%%.*}
+                url=${line#*=}
 
-                    #logs
-                    printf "\n\n$repoName.$remote) Running \`git ls-remote "$url"\`:\n" >> "$repoDir/audit_logs"
-            
-                    #query
-                    output=$(git ls-remote "$url")
-                    if [ $? -ne 0 ]; then
-                        PrintError "Remote \"$remote\" of repository \"$repoName\", failed to respond correctly."
-                    else
-                        countSuccess=$((countSuccess + 1))
-                    fi
+                #logs
+                printf "\n\n$repoName.$remote) running \`git ls-remote "$url"\`:\n" >> "$logsFile"
+        
+                #query + log
+                output=$(git ls-remote "$url")
+                exitCode=$?
+                echo "$output" >> "$logsFile"
 
+                #check
+                if [ "$exitCode" -ne 0 ]; then
+                    PrintSubError "Remote \"$remote\" of repository \"$repoName\", failed to respond correctly."
+                    printf "\n\n$repoName.$remote) bad exit status $?" >> "$logsFile"
+                    continue
+                else
+                    countSuccess=$((countSuccess + 1))
+                fi
+
+                #check if repo exists locally
+                foundMissingCommit=false
+                if [ -d "$repoPath" ]; then
                     #verify if commit hash exist in local repo $repoPath
-                    # verify if commit hash exists in local repo $repoPath
                     while IFS= read -r remoteLine; do
                         # extract hash from remote line
                         commitHash=$(echo "$remoteLine" | awk '{print $1}')
                         
                         # check if commit exists locally
-                        if git -C "$repoPath" cat-file -e "$commitHash" 2>/dev/null; then
-                            printf "Commit %s from remote %s exists locally.\n" "$commitHash" "$remote" >> "$repoDir/audit_logs"
-                        else
-                            PrintError "Commit $commitHash from remote \"$remote\" of repository \"$repoName\" does NOT exist locally."
+                        if ! git -C "$repoPath" cat-file -e "$commitHash" 2>/dev/null; then
+                            PrintSubError "Commit $commitHash from remote \"$remote\" of repository \"$repoName\" does NOT exist locally."
+                            printf "\n\n$repoName.$remote) unknown commit $commitHash" >> "$logsFile"
+                            foundMissingCommit=true
+                            break
                         fi
                     done <<< "$output"
 
-                    
-                done < "$repoDir/config/$repoName"
-            else
-                Print "Response audit for repository \"$repoName\"."
-
-                #load config and query remotes
-                while IFS= read -r line; do
-                    #filter
-                    [[ $line == remote.*.url=* ]] || continue
-                    #count
-                    countAll=$((countAll + 1))
-                    #get values
-                    remote=${line#remote.}
-                    remote=${remote%%.*}
-                    url=${line#*=}
-                    
-                    #logs
-                    printf "\n\n$repoName.$remote) Running \`git ls-remote "$url"\`:\n" >> "$repoDir/audit_logs"
-            
-                    #query
-                    output=$(git ls-remote "$url")
-                    if [ $? -ne 0 ]; then
-                        PrintError "Remote \"$remote\" of repository \"$repoName\", failed to respond correctly."
-                    else
-                        countSuccess=$((countSuccess + 1))
+                    #subtract broken remote
+                    if [ "$foundMissingCommit" == true ]; then
+                        countSuccess=$((countSuccess - 1))
                     fi
-
-                    #logs
-                    printf "$output" >> "$repoDir/audit_logs"
-
-                done < "$repoDir/config/$repoName"
-            fi
+                fi
+            done < "$repoDir/config/$repoName"
         else
-            PrintError "No audit for repository \"$repoName\""
+            PrintSubError "No audit for repository \"$repoName\""
+            printf "\n\n$repoName) audit none" >> "$logsFile"
             continue
         fi
 
@@ -633,7 +627,8 @@ Audit(){
         else
             PrintWarning "Only $countSuccess/$countAll of repository \"$repoName\" remotes have all local commits."
         fi
-        
+        printf "\n\n$repoName) score $countSuccess/$countAll" >> "$logsFile"
+
         #next
     done < "$repoDir/repolist"
 }
