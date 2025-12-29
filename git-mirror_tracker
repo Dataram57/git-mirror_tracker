@@ -687,7 +687,7 @@ case "$1" in
         ;;
     
     demark)
-        DeMark $2
+        DeMark "$2"
         ;;
     
     list)
@@ -704,7 +704,7 @@ case "$1" in
     #region Remote Server Actions
 
     sync)
-        Sync $2 $3
+        Sync "$2" "$3"
         ;;
 
     audit)
