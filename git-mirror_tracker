@@ -62,6 +62,7 @@ RepoCleanChanges(){
 }
 
 RepoCommit(){
+    RepoCleanChanges
     cd "$repoDir"
     #check changes
     if [ -z "$(git status --porcelain)" ]; then
@@ -722,7 +723,7 @@ case "$1" in
         fi
         ;;
     
-    logs)
+    log)
         less "$repoDir/audit_logs" 
         ;;
 
@@ -734,11 +735,30 @@ case "$1" in
     import)
         ;;
     #------------------------------------------------------------
-    fetch)
+    version)
+        echo "0.9.0"
         ;;
+    help)
+        #echo -e "\033[0;34mInfo\033[0m: 2"
+        echo -e "\033[0;34mversion\033[0m - Displays application version."
+        echo ""
+        echo -e "\033[0;34mmark\033[0m [PATHS...] - Adds repository into the tracking list."
+        echo -e "\033[0;34mdemark\033[0m REPOSITORY_NAME - Removes repository from the tracking list."
+        echo -e "\033[0;34mlist\033[0m - Lists repositories listed on the tracking list."
+        echo -e "\033[0;34mupdate\033[0m - Captures the current local config from the available repositories of the tracking list."
+        echo ""
+        echo -e "\033[0;34msync\033[0m REPOSITORY_NAME [NEW_PATH] - clones the repository from the captured remote server and applies captured local config."
+        echo -e "\033[0;34maudit\033[0m [REPOSITORY_NAMES...] - Audits availability of repositories listed in the tracking list."
+        echo -e "\033[0;34mlog\033[0m - Displays audit logs."
+        echo ""
+        echo -e "\033[0;34mstatus\033[0m - Displays currently staged changes."
+        echo -e "\033[0;34mcommit\033[0m - Commits currently staged changes."
+        echo -e "\033[0;34mhistory\033[0m - Displays history of changes."
+        ;;
+    
     #------------------------------------------------------------
     *)
-        Print "No command"
+        Print "Unknown command. Use \`help\` to list commands."
         ;;
 esac
 
