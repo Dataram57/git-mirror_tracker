@@ -536,7 +536,7 @@ AuditSingle(){ #repoName repoPath repoId
             remote=${remote%%.*}
             url=${line#*=}
 
-            printf "\n\n$repoName.$remote) running \`git fetch $remote\`\n" >> "$logsFile"
+            printf "\n\n%s.%s) running \`git fetch %s\`\n" "$repoName" "$remote" "$remote" >> "$logsFile"
 
             output=$(git -C "$repoPath" fetch "$remote" --quiet 2>&1)
             exitCode=$?
@@ -575,7 +575,7 @@ AuditSingle(){ #repoName repoPath repoId
             #check
             if [ "$exitCode" -ne 0 ]; then
                 PrintSubError "Remote \"$remote\" of repository \"$repoName\", failed to respond correctly."
-                printf "\n\n$repoName.$remote) bad exit status $?" >> "$logsFile"
+                printf "\n\n%s.%s) bad exit status %s\n" "$repoName" "$remote" "$?" >> "$logsFile"
                 continue
             else
                 countSuccess=$((countSuccess + 1))
@@ -592,7 +592,7 @@ AuditSingle(){ #repoName repoPath repoId
                     # check if commit exists locally
                     if ! git -C "$repoPath" cat-file -e "$commitHash" 2>/dev/null; then
                         PrintSubError "Commit $commitHash from remote \"$remote\" of repository \"$repoName\" does NOT exist locally."
-                        printf "\n\n$repoName.$remote) unknown commit $commitHash" >> "$logsFile"
+                        printf "\n\n%s.%s) unknown commit %s\n" "$repoName" "$remote" "$commitHash" >> "$logsFile"
                         foundMissingCommit=true
                         break
                     fi
@@ -606,7 +606,7 @@ AuditSingle(){ #repoName repoPath repoId
         done < "$repoDir/config/$repoName"
     else
         PrintSubError "No audit for repository \"$repoName\""
-        printf "\n\n$repoName) audit none" >> "$logsFile"
+        printf "\n\n%s) audit none\n" "$repoName" >> "$logsFile"
     fi
 
     #print stats
