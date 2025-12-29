@@ -11,7 +11,7 @@
 
 ## Nix Package
 
-Edit these parts of your config
+Edit these parts of your config:
 ```nix
 inputs = {
     Dataram57_git-mirror_tracker.url = "github:Dataram57/git-mirror_tracker";
@@ -20,7 +20,7 @@ inputs = {
 
 # ... stuff...
 
-outputs = inputs @ { ..., Dataram57_git-mirror_tracker , ... }:
+outputs = inputs @ { ..., Dataram57_git-mirror_tracker , ... }: #...
 
 # ... stuff...
 
