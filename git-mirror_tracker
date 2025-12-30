@@ -682,6 +682,12 @@ case "$1" in
         RepoCommit
         ;;
 
+    git)
+        cd "$repoDir"
+        shift
+        git "$@"
+        ;;
+
     #endregion
 
     #------------------------------------------------------------
@@ -749,7 +755,6 @@ case "$1" in
         echo "0.9.0"
         ;;
     help)
-        #echo -e "\033[0;34mInfo\033[0m: 2"
         echo -e "\033[0;34mversion\033[0m - Displays application version."
         echo ""
         echo -e "\033[0;34mmark\033[0m [PATHS...] - Adds repository into the tracking list."
@@ -764,6 +769,7 @@ case "$1" in
         echo -e "\033[0;34mstatus\033[0m - Displays currently staged changes."
         echo -e "\033[0;34mcommit\033[0m - Commits currently staged changes."
         echo -e "\033[0;34mhistory\033[0m - Displays history of changes."
+        echo -e "\033[0;34mgit\033[0m [ARGS...] - Executes \`git\` with given args at $repoDir."
         ;;
     
     #endregion
