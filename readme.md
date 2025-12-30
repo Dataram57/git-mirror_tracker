@@ -1,4 +1,6 @@
-# Git Mirror Tracker (Version 0.9.0)
+# Git Mirror Tracker
+
+Version: `0.9.0`
 
 `git-mirror_tracker` is a tool that keep track of your local repositories. It features mechanisms that help you verify if the repository is available on its declared remotes, and also lets you clone and apply earlier saved local config with all saved remotes mentioned.
 
