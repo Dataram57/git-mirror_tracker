@@ -755,6 +755,17 @@ case "$1" in
         echo "0.9.0"
         ;;
     help)
+        break="================================================================"
+        echo "$break"
+        echo -e "# \033[0;32mGeneral\033[0m"
+        echo ""
+        echo "\`git-mirror_tracker\` is a tool that keep track of your local repositories. It features mechanisms that help you verify if the repository is available on its declared remotes, and also lets you clone and apply earlier saved local config with all saved remotes mentioned."
+        echo ""
+        echo "$break"
+        echo -e "# \033[0;32mCommands\033[0m"
+        echo ""
+        echo -e "Usage: \`\033[0;34mgit-mirror_tracker\033[0m COMMAND [ARGS...]\`"
+        echo ""
         echo -e "\033[0;34mversion\033[0m - Displays application version."
         echo ""
         echo -e "\033[0;34mmark\033[0m [PATHS...] - Adds repository into the tracking list."
@@ -770,6 +781,8 @@ case "$1" in
         echo -e "\033[0;34mcommit\033[0m - Commits currently staged changes."
         echo -e "\033[0;34mhistory\033[0m - Displays history of changes."
         echo -e "\033[0;34mgit\033[0m [ARGS...] - Executes \`git\` with given args at $repoDir."
+        echo ""
+        echo "$break"
         ;;
     
     #endregion

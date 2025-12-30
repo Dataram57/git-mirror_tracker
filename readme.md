@@ -1,11 +1,32 @@
 # Git Mirror Tracker (WIP)
 
-`git-mirror_tracker` lets you keep track of where your repositories are remotely stored.
+`git-mirror_tracker` is a tool that keep track of your local repositories. It features mechanisms that help you verify if the repository is available on its declared remotes, and also lets you clone and apply earlier saved local config with all saved remotes mentioned.
 
-### Problems?
+### Commands
 
-- Forks have the same root commit hashes. repoPath and repoName is what can then distinguish these repos.
+```
+Usage: `git-mirror_tracker COMMAND [ARGS...]`
 
+version - Displays application version.
+
+mark [PATHS...] - Adds repository into the tracking list.
+demark REPOSITORY_NAME - Removes repository from the tracking list.
+list - Lists repositories listed on the tracking list.
+update - Captures the current local config from the available repositories of the tracking list.
+
+sync REPOSITORY_NAME [NEW_PATH] - clones the repository from the captured remote server and applies captured local config.
+audit [REPOSITORY_NAMES...] - Audits availability of repositories listed in the tracking list.
+log - Displays audit logs.
+
+status - Displays currently staged changes.
+commit - Commits currently staged changes.
+history - Displays history of changes.
+git [ARGS...] - Executes `git` with given args at $HOME/.config/git-mirror_tracker/.
+```
+
+### Problems
+
+- Forks have the same root commit hashes. `repoPath` and `repoName` is what allows forks to be trated as new repositories. Proper prompts appears when such problem is met.
 
 # Installing
 
