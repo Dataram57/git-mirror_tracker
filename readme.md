@@ -27,6 +27,7 @@ git [ARGS...] - Executes `git` with given args at $HOME/.config/git-mirror_track
 ### Problems
 
 - Forks have the same root commit hashes. `repoPath` and `repoName` is what allows forks to be trated as new repositories. Proper prompts appears when such problem is met.
+- `;` is a character that should not be used as it is used as `$separator` in the code.
 
 # Installing
 
