@@ -42,18 +42,19 @@ git [ARGS...] - Executes `git` with given args at $HOME/.config/git-mirror_track
 Edit these parts of your config:
 ```nix
 inputs = {
-    Dataram57_git-mirror_tracker.url = "github:Dataram57/git-mirror_tracker";
+    git-mirror_tracker.url = "github:Dataram57/git-mirror_tracker";
+    #Alternative: git-mirror_tracker.url = "git+https://kallithea.dataram57.com/git-mirror_tracker";
     # ... other channels ...
 };
 
 # ... stuff...
 
-outputs = inputs @ { ..., Dataram57_git-mirror_tracker , ... }: #...
+outputs = inputs @ { ..., git-mirror_tracker , ... }: #...
 
 # ... stuff...
 
 home.packages = [       # or `environment.systemPackages`
-    Dataram57_git-mirror_tracker.packages.${pkgs.system}.git-mirror_tracker
+    git-mirror_tracker.packages.${pkgs.system}.git-mirror_tracker
     # ... other packages
 ]
 ```
