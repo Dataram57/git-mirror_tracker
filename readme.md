@@ -26,16 +26,13 @@ history - Displays history of changes.
 git [ARGS...] - Executes `git` with given args at $HOME/.config/git-mirror_tracker/.
 ```
 
-### Problems
-
-- Forks have the same root commit hashes. `repoPath` and `repoName` is what allows forks to be trated as new repositories. Proper prompts appears when such problem is met.
-- `;` is a character that should not be used as it is used as `$separator` in the code.
-
-### TODO
-
-- `sync`: Replace `git clone` with `git init`, `apply local config`, `git fetch`. This ensures compatibilit with tools that read config variables during fetch.
-
 # Installing
+
+## Stable Versions
+
+```
+0.9.0 -> 7ff8a9e4aea81befeabb9f2d2eacd6249445005a
+```
 
 ## Nix Package
 
